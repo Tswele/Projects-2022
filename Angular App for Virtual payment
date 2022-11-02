@@ -1,0 +1,219 @@
+--Service
+
+import { Injectable } from '@angular/core';
+import {HttpClient,HttpClientModule} from "@angular/common/http";
+import {Card} from "../Model/card";
+import {Observable} from "rxjs";
+import {addError} from "@angular-devkit/build-angular/src/utils/webpack-diagnostics";
+
+@Injectable({
+  providedIn: 'root'
+})
+export class CardService {
+  apiurl = "/api";
+ // addCardUrl : string;
+ // getJwTokenUrl : string;
+
+  //  addAddressUrl : string;
+
+
+  constructor(private http : HttpClient) {
+
+   // this.addCardUrl= 'http://localhost:12345/Save';
+   // this.getJwTokenUrl= 'http://localhost:12345/authenticate';
+
+  }
+
+  //get Jwt Token
+  getJwtToken(card : Card) : Observable<any>{
+    card['username'] = 'Adumo11';
+    card['password'] = '123';
+    return this.http.post<any>(`${this.apiurl}/authenticate`,card);
+  }
+
+  // Method for Add card info
+  addCards(card: Card): Observable<any>{
+    return this.http.post<Card>(`${this.apiurl}/Save`,card);
+  }
+  /*/add the address
+  addAddress(address : Card) : Observable<Card>{
+    return this.http.post<Card>(this.addAddressUrl,address);
+
+  }
+*/
+
+}
+
+--Model
+
+export class Card {
+
+  cuid      : string ="";
+  auid      : string ="";
+  reference : string ="";
+  amount    : string ="";
+  token     : string ="";
+  username :  string ="";
+  password : string ="123123";
+
+
+}
+
+
+--Component
+
+import { Component, OnInit } from '@angular/core';
+import {FormGroup, FormBuilder} from "@angular/forms";
+import {Card} from "../../Model/card";
+import {CardService} from "../../Service/card.service";
+
+@Component({
+  selector: 'app-card-ui',
+  templateUrl: './card-ui.component.html',
+  styleUrls: ['./card-ui.component.css']
+})
+export class CardUIComponent implements OnInit {
+
+  cardDetail !: FormGroup;
+  cardObj : Card= new Card();
+
+  Jwttoken ="rere";
+  //CardList : CardInfo[] = [];
+
+  constructor(private formBuilder : FormBuilder, public cardService : CardService) { }
+
+  ngOnInit(): void {
+
+    this.cardDetail = this.formBuilder.group({
+      cuid      : [''],
+      auid      : [''],
+      reference : [''],
+      amount    : ['']
+
+
+    });
+
+  }
+  cardCheckout(){
+
+    console.log(this.cardDetail);
+
+    //Post the info to the DB
+    this.cardObj.cuid = this.cardDetail.value.cuid;
+    this.cardObj.auid = this.cardDetail.value.auid;
+    this.cardObj.reference = this.cardDetail.value.reference;
+    this.cardObj.amount = this.cardDetail.value.amount;
+    this.cardObj.token = this.cardDetail.value.token;
+    //Get Jtwtoke
+
+    this.cardService.getJwtToken(this.cardObj).subscribe(res =>{
+      this.Jwttoken =res.jwt;
+
+      const token: HTMLInputElement | null = document.getElementById("JwtToken") as HTMLInputElement
+      console.log(token);
+      token?.setAttribute('value',this.Jwttoken);
+      token.value= this.Jwttoken;
+      console.log(this.Jwttoken);
+      const form: any = document.getElementById('form');
+      console.log(form);
+      form.submit();
+      console.log(res);
+      //cardDetail.submit();
+    })
+
+
+//
+
+
+
+
+
+    //call the service method addCard
+    this.cardService.addCards(this.cardObj).subscribe(res=>{
+      console.log(res);
+
+    },error => {
+      console.log(error)
+    });
+
+    /*/call the service method Add address
+    this.cardService.addAddress(this.cardObj).subscribe(res=>{
+      console.log(res);
+
+    },error => {
+      console.log(error)
+    });*/
+  }
+
+
+
+
+}
+
+--Html
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+
+<h2>Virtual Form Post</h2>
+<div class="row">
+  <div class="col-75">
+    <div class="container">
+      <form [formGroup]="cardDetail" action="https://staging-apiv3.adumoonline.com/product/payment/v1/initialisevirtual" method="POST" id="form" >
+
+        <div class="row">
+          <div class="col-50">
+            <h3>Vitual Payment</h3>
+
+            <label for="cuid">CUID </label>
+            <input type="text"  formControlName="cuid" id="cuid" name="MerchantID" placeholder="9BA5008C-08EE-4286-A349-54AF91A621B0">
+
+            <label for="auid">AUID </label>
+            <input type="text" formControlName="auid" id="auid" name="ApplicationID" placeholder="4196B0B8-DB88-42E5-A06D-294A5E4DED87">
+
+            <label for="reference">MERCHANT REFERENCE </label>
+            <input type="text" formControlName="reference" id="reference" name="MerchantReference" placeholder="BS_323musashaTheKing" >
+
+            <label for="amount">AMOUNT </label>
+            <input type="text" formControlName="amount" id="amount" name="Amount"  placeholder="4.00">
+
+            <!--            <label for="JwtToken">Jwt </label>-->
+            <!--            <input cols="160"name="token" id="JwtToken"  placeholder="Token will be displayed" value="jwtPlaceholder" formControlName="JwtToken" >-->
+          </div>
+        </div>
+        <input type="submit" value="Post" (click)="cardCheckout()" class="btn" />
+        <input type="hidden" name="Mode" value="1">
+        <input type="hidden" id="JwtToken" name="Token" value="jwtPlaceholder" >
+        <input type="hidden" name="txtCurrencyCode" value="ZAR">
+        <input type="hidden" name="DisplayPrice" value="0.02">
+        <input type="hidden" name="DisplayCurrencyCode" value="ZAR">
+        <input type="hidden" name="RedirectSuccessfulURL" value="https://virtual.mygateglobal.com/success_failure.php">
+        <input type="hidden" name="RedirectFailedURL" value="https://virtual.mygateglobal.com/success_failure.php">
+
+
+
+      </form>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
